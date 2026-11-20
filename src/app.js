@@ -105,6 +105,7 @@ app.use("/api/hero", require("./routes/hero.routes"));
 app.use("/api/files", require("./routes/files.routes"));
 app.use("/api/newsletter", require("./routes/newsletter.routes"));
 app.use("/api/settings", require("./routes/settings.routes"));
+app.use("/api/newsletter", require("./routes/newsletter.routes"));
 
 // ─────────────────────────────────────────────────────────────
 // 404 + Error handlers

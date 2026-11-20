@@ -37,6 +37,7 @@ router.post(
   ctrl.login,
 );
 router.get("/me", protect, ctrl.getMe);
+router.patch("/profile", protect, ctrl.updateProfile);
 router.patch("/change-password", protect, ctrl.changePassword);
 
 module.exports = router;
