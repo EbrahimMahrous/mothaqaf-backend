@@ -12,8 +12,8 @@ const app = express();
 // ─────────────────────────────────────────────────────────────
 app.use(
   helmet({
-    contentSecurityPolicy: false, // API, not HTML — CSP not needed
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // allow Cloudinary images
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 
@@ -30,25 +30,24 @@ const allowedOrigins = (
 
 console.log("🔐 CORS allowed origins:", allowedOrigins);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no Origin header (curl, Postman, server-to-server)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (allowedOrigins.includes("*")) return callback(null, true);
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (allowedOrigins.includes("*")) return callback(null, true);
 
-      console.warn(`❌ CORS blocked: ${origin}`);
-      return callback(new Error(`CORS: ${origin} not allowed`));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+    console.warn(`❌ CORS blocked: ${origin}`);
+    return callback(new Error(`CORS: ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// Handle preflight
-app.options("*", cors());
+app.use(cors(corsOptions));
+
+// ✅ Express 5: use RegExp instead of '*' for wildcard
+app.options(/.*/, cors(corsOptions));
 
 // ─────────────────────────────────────────────────────────────
 // Body parsers
@@ -72,8 +71,6 @@ app.use(
 
 // ─────────────────────────────────────────────────────────────
 // DB connection middleware (Vercel-friendly)
-// Ensures MongoDB is connected before any route runs.
-// On local, this is a no-op after the first request (cached).
 // ─────────────────────────────────────────────────────────────
 app.use(async (req, res, next) => {
   try {
