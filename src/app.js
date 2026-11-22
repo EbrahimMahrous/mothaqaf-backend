@@ -7,6 +7,9 @@ const { errorHandler, notFound } = require("./middleware/errorHandler");
 
 const app = express();
 
+// Trust Vercel / proxy headers so req.ip and x-forwarded-for are real.
+app.set("trust proxy", 1);
+
 // ─────────────────────────────────────────────────────────────
 // Security headers
 // ─────────────────────────────────────────────────────────────
@@ -46,7 +49,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ✅ Express 5: use RegExp instead of '*' for wildcard
+// Express 5: use RegExp instead of '*' for wildcard
 app.options(/.*/, cors(corsOptions));
 
 // ─────────────────────────────────────────────────────────────
@@ -104,8 +107,8 @@ app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/hero", require("./routes/hero.routes"));
 app.use("/api/files", require("./routes/files.routes"));
 app.use("/api/newsletter", require("./routes/newsletter.routes"));
+app.use("/api/contact", require("./routes/contact.routes"));
 app.use("/api/settings", require("./routes/settings.routes"));
-app.use("/api/newsletter", require("./routes/newsletter.routes"));
 
 // ─────────────────────────────────────────────────────────────
 // 404 + Error handlers

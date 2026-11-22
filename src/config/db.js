@@ -20,10 +20,11 @@ const connectDB = async () => {
   // No promise yet → create one
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // fail fast instead of buffering
-      serverSelectionTimeoutMS: 5000, // show error after 5s instead of 30s
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 30000, // 30s — Atlas from Egypt can be slow
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
+      family: 4, // force IPv4 (avoids IPv6 issues on some Windows networks)
     };
 
     cached.promise = mongoose

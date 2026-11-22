@@ -11,12 +11,25 @@ const imageStorage = new CloudinaryStorage({
   },
 });
 
+// Store PDFs as Cloudinary "image" so they can be served inline (view).
+// Other document types remain "raw" (download-only).
 const fileStorage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: "mosaqaf/files",
-    resource_type: "raw",
-    allowed_formats: ["pdf", "doc", "docx", "zip", "rar", "txt", "xlsx"],
+  params: async (req, file) => {
+    const isPdf =
+      file.mimetype === "application/pdf" ||
+      /\.pdf$/i.test(file.originalname || "");
+
+    return {
+      folder: "mosaqaf/files",
+      resource_type: isPdf ? "image" : "raw",
+      format: isPdf ? "pdf" : undefined,
+      allowed_formats: ["pdf", "doc", "docx", "zip", "rar", "txt", "xlsx"],
+      public_id: `${Date.now()}-${(file.originalname || "file")
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[^\w-]/g, "_")
+        .slice(0, 60)}`,
+    };
   },
 });
 
