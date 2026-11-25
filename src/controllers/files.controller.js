@@ -15,10 +15,6 @@ const MIME_BY_EXT = {
   txt: "text/plain",
 };
 
-/**
- * Resolve a reliable MIME type for a stored file.
- * Priority: stored mimeType > extension map > octet-stream fallback.
- */
 function resolveMime(fileDoc) {
   if (fileDoc.mimeType && fileDoc.mimeType !== "application/octet-stream") {
     return fileDoc.mimeType;
@@ -27,13 +23,9 @@ function resolveMime(fileDoc) {
   return MIME_BY_EXT[ext] || "application/octet-stream";
 }
 
-/**
- * Build a safe filename for Content-Disposition (supports Arabic).
- * Uses RFC 5987 encoding: filename= for ASCII + filename*=UTF-8'' for the rest.
- */
 function buildFilename(title, format, publicId) {
   const base = (title || publicId || "file")
-    .replace(/[\\/:*?"<>|]/g, "") // strip filesystem-unsafe chars
+    .replace(/[\\/:*?"<>|]/g, "")
     .trim()
     .replace(/\s+/g, "-")
     .slice(0, 80);
@@ -48,10 +40,6 @@ function contentDisposition(type, filename) {
   )}`;
 }
 
-/**
- * Fetch a remote URL with a timeout + clear error logging.
- * Fixes "fetch failed" crashes by turning them into readable messages.
- */
 async function fetchWithTimeout(url, ms = 20000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
@@ -70,9 +58,6 @@ async function fetchWithTimeout(url, ms = 20000) {
   }
 }
 
-/**
- * Stream a remote file body to the response.
- */
 async function streamToResponse(upstream, res) {
   const len = upstream.headers.get("content-length");
   if (len) res.setHeader("Content-Length", len);
@@ -95,7 +80,6 @@ async function streamToResponse(upstream, res) {
 // Public endpoints
 // ═══════════════════════════════════════════════════════════
 
-// GET /api/files — public list with filters & pagination
 exports.getAll = async (req, res, next) => {
   try {
     const { q = "", category, sort = "-createdAt" } = req.query;
@@ -145,7 +129,6 @@ exports.getAll = async (req, res, next) => {
   }
 };
 
-// GET /api/files/stats — dashboard stats
 exports.getStats = async (req, res, next) => {
   try {
     const [result] = await DownloadFile.aggregate([
@@ -189,7 +172,6 @@ exports.getStats = async (req, res, next) => {
   }
 };
 
-// GET /api/files/:id — single file (increments view counter)
 exports.getById = async (req, res, next) => {
   try {
     const file = await DownloadFile.findByIdAndUpdate(
@@ -208,7 +190,6 @@ exports.getById = async (req, res, next) => {
   }
 };
 
-// GET /api/files/:id/view — inline view (PDF in browser, images inline)
 exports.view = async (req, res, next) => {
   try {
     const fileDoc = await DownloadFile.findByIdAndUpdate(
@@ -253,7 +234,6 @@ exports.view = async (req, res, next) => {
   }
 };
 
-// GET /api/files/:id/download — force download with correct filename
 exports.download = async (req, res, next) => {
   try {
     const fileDoc = await DownloadFile.findByIdAndUpdate(
@@ -300,7 +280,6 @@ exports.download = async (req, res, next) => {
 // Admin endpoints
 // ═══════════════════════════════════════════════════════════
 
-// POST /api/files — upload file (admin)
 exports.upload = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -364,7 +343,6 @@ exports.upload = async (req, res, next) => {
   }
 };
 
-// POST /api/files/bulk — upload multiple files (admin)
 exports.uploadMany = async (req, res, next) => {
   try {
     if (!req.files || req.files.length === 0) {
@@ -415,7 +393,6 @@ exports.uploadMany = async (req, res, next) => {
   }
 };
 
-// PATCH /api/files/:id — update metadata (admin)
 exports.update = async (req, res, next) => {
   try {
     const {
@@ -465,7 +442,49 @@ exports.update = async (req, res, next) => {
   }
 };
 
-// DELETE /api/files/:id — remove file (admin)
+// POST /api/files/:id/cover — upload cover image (admin)
+exports.uploadCover = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "لازم ترفع صورة" });
+    }
+
+    const fileDoc = await DownloadFile.findById(req.params.id);
+    if (!fileDoc) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الملف غير موجود" });
+    }
+
+    // Delete the old cover from Cloudinary if it's one of ours
+    if (fileDoc.coverImage && fileDoc.coverImage.includes("cloudinary.com")) {
+      try {
+        const match = fileDoc.coverImage.match(
+          /\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z0-9]+)?$/i,
+        );
+        if (match?.[1]) {
+          await cloudinary.uploader.destroy(match[1]);
+        }
+      } catch (e) {
+        console.warn("Old cover delete failed (ignored):", e.message);
+      }
+    }
+
+    fileDoc.coverImage = req.file.path;
+    await fileDoc.save();
+
+    res.json({
+      success: true,
+      message: "تم رفع صورة الغلاف",
+      data: fileDoc,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.remove = async (req, res, next) => {
   try {
     const fileDoc = await DownloadFile.findById(req.params.id);
